@@ -16,6 +16,7 @@
   - [Vanilla（原生）](#vanilla原生)
   - [React](#react)
   - [Vue 3](#vue-3)
+  - [Svelte](#svelte)
 - [事件总线调试（**强烈推荐**）](#事件总线调试强烈推荐)
 - [初始化选项](#初始化选项)
 - [客户端 API](#客户端-api)
@@ -46,10 +47,12 @@ packages/
   rum-core/    # 核心 SDK（插件体系 + 传输层 + initRUM）
   rum-react/   # React 适配（ErrorBoundary / HOC / Hook）
   rum-vue/     # Vue 3 适配（errorHandler 插件）
+  rum-svelte/  # Svelte 适配
 examples/
   vanilla/     # 原生示例（IIFE 直接跑）
-  react/       # React Playground（IIFE）
-  vue/         # Vue Playground（IIFE）
+  react/       # React Playground（IIFE, ESM）
+  vue/         # Vue Playground（IIFE, ESM）
+  svelte/      
 ```
 
 ---
@@ -63,10 +66,10 @@ examples/
 pnpm i
 
 # 2) 构建全部包（生成 dist/*.js）
-pnpm -r --filter ./packages/** run build
+npm run build
 
 # 3) 类型检查（可选）
-pnpm -r --filter ./packages/** run typecheck
+npm run typecheck
 ```
 
 **工作区安装到你的前端工程：**
@@ -80,11 +83,12 @@ pnpm --filter your-app add @rum/rum-core@workspace:* @rum/rum-react@workspace:* 
 
 ## 产物说明（ESM / IIFE）
 
-| 包名             | 给打包器（import）                        | 给 `<script>`（全局）                  |
-|------------------|-------------------------------------------|----------------------------------------|
-| `@rum/rum-core`  | `dist/rum.js`                              | `dist/rum.global.js` → `window.RUM`    |
-| `@rum/rum-react` | `dist/react.js`                            | `dist/react.global.js` → `window.RUMReact` |
-| `@rum/rum-vue`   | `dist/vue.js`                              | `dist/vue.global.js` → `window.RUMVue` |
+| 包名               | 给打包器（import）         | 给 `<script>`（全局）                         |
+|--------------------|----------------------------|-----------------------------------------------|
+| `@rum/rum-core`    | `dist/rum.js`              | `dist/rum.global.js` → `window.RUM`           |
+| `@rum/rum-react`   | `dist/react.js`            | `dist/react.global.js` → `window.RUMReact`    |
+| `@rum/rum-vue`     | `dist/vue.js`              | `dist/vue.global.js` → `window.RUMVue`        |
+| `@rum/rum-svelte`  | `dist/svelte.js`           | `dist/svelte.global.js` → `window.RUMSvelte`  |
 
 > 工程里 **请使用 ESM**：`import { initRUM } from '@rum/rum-core'`。  
 > Demo/静态页 **可用 IIFE**：直接 `<script src="...rum.global.js"></script>`。
@@ -206,7 +210,76 @@ export function SomeHookyComponent(){
 </script>
 ```
 
+
 ---
+
+### Svelte
+
+```ts
+// src/main.ts
+import { initRUM } from '@rum/rum-core';
+import App from './App.svelte';
+
+const client = initRUM({
+  appId: 'demo',
+  release: '0.1.0',
+  features: { console: true, resource: true, behavior: true, lifecycle: true },
+});
+
+client.onEvent(e => console.log('[RUM]', e));
+
+export const app = new App({
+  target: document.getElementById('app')!,
+  props: { client }
+});
+```
+
+```svelte
+<!-- src/App.svelte -->
+<script lang="ts">
+  import { createRUMEventStore, useRUMReport, rumTrackOn } from '@rum/rum-svelte';
+
+  // 从 main.ts 透传进来的 RUM 客户端
+  export let client: {
+    track: (e: any) => void;
+    onEvent: (cb: (e:any)=>void) => () => void;
+    flush: (urgent?: boolean) => void;
+  };
+
+  // 1) 事件订阅：拿到所有（插件 + 业务）事件
+  const events = createRUMEventStore(client, { bufferSize: 300 });
+
+  // 2) 手动上报：配合 try/catch
+  const report = useRUMReport(client.track);
+
+  // —— demo 触发器 ——
+  function crashSync(){ (window as any).__NOPE__.x = 1; }
+  function crashAsync(){ Promise.reject(new Error('Unhandled rejection from Svelte')); }
+  function tryCatch(){ try { JSON.parse('{bad json'); } catch (e) { report(e); } }
+</script>
+
+<div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
+  <!-- JS 错误 -->
+  <button on:click={crashSync}>JS Error</button>
+  <button on:click={crashAsync}>Unhandled Promise</button>
+
+  <!-- 手动上报（useRUMReport）+ 行为跟踪（rumTrackOn） -->
+  <button
+    on:click={tryCatch}
+    use:rumTrackOn={{ track: client.track, name: 'try-catch' }}>
+    try/catch 上报
+  </button>
+
+  <!-- 网络触发 -->
+  <button on:click={() => fetch('/not-found-' + Date.now())}>fetch 404</button>
+</div>
+
+<ul>
+  {#each $events as e, i}
+    <li><pre>{JSON.stringify(e, null, 2)}</pre></li>
+  {/each}
+</ul>
+```
 
 ## 事件总线调试（**强烈推荐**）
 
@@ -335,6 +408,7 @@ npx http-server -c-1 . -p 5500 --cors
 - `http://127.0.0.1:5500/examples/vanilla/`
 - `http://127.0.0.1:5500/examples/react/`
 - `http://127.0.0.1:5500/examples/vue/`
+- `http://127.0.0.1:5500/examples/svelte/`
 
 > 事件流展示依赖 `client.onEvent(addEvent)`，已在示例中接好。
 
