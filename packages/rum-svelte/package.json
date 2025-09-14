@@ -1,0 +1,19 @@
+{
+  "name": "@rum/rum-svelte",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/svelte.js",
+  "module": "./dist/svelte.js",
+  "exports": {
+    ".": {
+      "import": "./dist/svelte.js"
+    }
+  },
+  "types": "./dist/svelte.d.ts",
+  "sideEffects": false,
+  "files": ["dist"],
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "typescript": "^5.6.3"
+  }
+}
