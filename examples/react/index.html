@@ -1,0 +1,257 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>RUM React Playground</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      :root { --bg:#0b0d10; --panel:#11151a; --muted:#9aa4af; --ok:#3fb950; --warn:#d29922; --err:#f85149; --info:#58a6ff; }
+      * { box-sizing: border-box }
+      body { margin:0; background:var(--bg); color:#e6edf3; font:14px/1.6 system-ui, -apple-system, Segoe UI, Roboto, Emoji; }
+      header { padding:14px 18px; background:#0d1117; border-bottom:1px solid #1f2328; display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+      header h1 { margin:0; font-size:16px; font-weight:700; letter-spacing:.3px }
+      header .pill { padding:2px 8px; border-radius:999px; background:#161b22; color:var(--muted); font-size:12px }
+      main { display:grid; grid-template-columns: 1fr 320px; gap:16px; padding:16px; }
+      .card { background:var(--panel); border:1px solid #1f2328; border-radius:12px; overflow:hidden }
+      .card h3 { margin:0; padding:10px 12px; font-size:13px; color:#c3d1d9; border-bottom:1px solid #1f2328; background:#0f1318; display:flex; align-items:center; justify-content:space-between; gap:8px }
+      .card .body { padding:12px }
+      .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 10px; margin:6px 6px 0 0; border:1px solid #2d333b; border-radius:8px; background:#161b22; color:#c9d1d9; cursor:pointer; }
+      .btn:hover { background:#1c2128 }
+      .btn.small { padding:6px 8px; font-size:12px }
+      .btn.err   { border-color: var(--err); color:#ffdfe1 }
+      .btn.warn  { border-color: var(--warn); color:#fff4cf }
+      .btn.ok    { border-color: var(--ok);  color:#d1ffd7 }
+      .btn.info  { border-color: var(--info); color:#d6eaff }
+      .row { display:flex; gap:8px; flex-wrap:wrap }
+      .kvs { display:grid; grid-template-columns: auto 1fr; gap:6px 10px; color:#c3d1d9 }
+      .kvs b { color:#9fb3c8 }
+      #feed { height: calc(100vh - 180px); overflow:auto; padding:0; margin:0; list-style:none; background:#0f1318; border-top:1px solid #1f2328 }
+      .evt { display:flex; padding:10px 12px; gap:10px; border-bottom:1px solid #1f2328; align-items:flex-start }
+      .evt pre { margin:0; white-space:pre-wrap; word-break:break-word; color:#c9d1d9 }
+      .badge { padding:2px 6px; font-size:12px; border-radius:6px; line-height:18px; align-self:center }
+      .badge.err{ background:#3a0d10; color:#ffb1b8; border:1px solid #5e141b }
+      .badge.warn{ background:#3a2b0d; color:#ffe08a; border:1px solid #5d4712 }
+      .badge.api{ background:#0d253a; color:#9ad1ff; border:1px solid #153a5e }
+      .badge.perf{ background:#0d3a2b; color:#a6ffcd; border:1px solid #155e47 }
+      .badge.route{ background:#2b0d3a; color:#e0b3ff; border:1px solid #45155e }
+      .badge.console{ background:#2f2f2f; color:#eee; border:1px solid #444 }
+      .badge.other{ background:#222; color:#ddd; border:1px solid #393939 }
+      .time { color:var(--muted); font-variant-numeric: tabular-nums; min-width:78px }
+      .footer { padding:8px 12px; color:#93a4b5; font-size:12px; display:flex; gap:14px; align-items:center; flex-wrap:wrap }
+      code { background:#11161b; padding:2px 6px; border-radius:6px; border:1px solid #1f2328; color:#d4e2f2 }
+      .muted { color: var(--muted) }
+      .react-card { width:100%; }
+      @media (max-width: 900px) { main { grid-template-columns: 1fr } #feed { height: 380px } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>RUM React Playground</h1>
+      <span class="pill" id="version">loading…</span>
+      <span class="pill">🧪 error/net/perf/route/console</span>
+    </header>
+
+    <main>
+      <section class="card">
+        <h3>
+          🔧 操作面板
+          <span>
+            <button class="btn small" onclick="toggleReact()">显隐 React</button>
+            <button class="btn small" onclick="clearFeed()">清空</button>
+          </span>
+        </h3>
+        <div class="body">
+          <div class="kvs" style="margin-bottom:10px">
+            <b>appId</b><span><code>demo</code></span>
+            <b>release</b><span><code>0.1.0</code></span>
+            <b>features</b><span class="muted">error, net, perf, route + console/resource/behavior/lifecycle</span>
+          </div>
+
+          <div class="row">
+            <!-- 错误类 -->
+            <button class="btn err" onclick="makeJSError()">JS Error</button>
+            <button class="btn err" onclick="makePromiseReject()">Unhandled Promise</button>
+            <button class="btn err" onclick="makeReactRenderError()">React Render Error</button>
+            <button class="btn err" onclick="makeResourceError()">Resource Error</button>
+
+            <!-- 网络类 -->
+            <button class="btn info" onclick="doFetchOk()">fetch 200</button>
+            <button class="btn info" onclick="doFetch404()">fetch 404</button>
+            <button class="btn info" onclick="doXHROk()">XHR 200</button>
+            <button class="btn info" onclick="doXHRFail()">XHR fail</button>
+
+            <!-- 性能 / 行为 / console -->
+            <button class="btn warn" onclick="blockMain()">LongTask</button>
+            <button class="btn" onclick="scrollDown()">Scroll</button>
+            <button class="btn" onclick="consoleWarn()">console.warn</button>
+            <button class="btn" onclick="consoleError()">console.error</button>
+
+            <!-- 路由 -->
+            <button class="btn ok" onclick="goHash()">Hash 跳转</button>
+            <button class="btn ok" onclick="goPush()">History 跳转</button>
+          </div>
+        </div>
+        <div class="footer">
+          <span>🧵 事件流</span>
+          <span>计数：<code id="cnt-all">0</code> 总，<code id="cnt-err">0</code> 错，<code id="cnt-api">0</code> 网，<code id="cnt-perf">0</code> 性能</span>
+        </div>
+        <ul id="feed"></ul>
+      </section>
+
+      <section class="card react-card">
+        <h3>⚛️ React 区域（内置 ErrorBoundary）</h3>
+        <div id="root" class="body"></div>
+      </section>
+    </main>
+
+    <!-- React UMD（开发版） -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+
+    <!-- RUM 核心 & React 适配（全局：RUM / RUMReact） -->
+    <script src="../../packages/rum-core/dist/rum.global.js"></script>
+    <script src="../../packages/rum-react/dist/react.global.js"></script>
+
+    <script>
+      // ========= 初始化 RUM =========
+      const client = RUM.initRUM({
+        appId: 'demo',
+        release: '0.1.0',
+        features: { console: true, resource: true, behavior: true, lifecycle: true },
+      });
+      document.getElementById('version').textContent = 'RUM v' + client.version;
+
+      // ========= 安全 JSON =========
+      function safeStringify(obj) {
+        const seen = new WeakSet();
+        return JSON.stringify(obj, (k, v) => {
+          if (typeof v === 'bigint') return v.toString();
+          if (typeof v === 'object' && v !== null) {
+            if (seen.has(v)) return '[Circular]';
+            seen.add(v);
+          }
+          return v;
+        }, 2);
+      }
+
+      // ========= 事件流可视化（订阅 SDK 总线） =========
+      const cnt = { all: 0, err: 0, api: 0, perf: 0 };
+      function clearFeed(){
+        document.getElementById('feed').innerHTML = '';
+        cnt.all = cnt.err = cnt.api = cnt.perf = 0;
+        document.getElementById('cnt-all').textContent = '0';
+        document.getElementById('cnt-err').textContent = '0';
+        document.getElementById('cnt-api').textContent = '0';
+        document.getElementById('cnt-perf').textContent = '0';
+      }
+      const addEvent = (evt) => {
+        cnt.all++;
+        const t = String(evt.type||'');
+        if (t.includes('error') || t==='js-error' || t==='promise-reject') cnt.err++;
+        if (t === 'api' || t === 'res') cnt.api++;
+        if (['ttfb','nav','first-paint','first-contentful-paint','longtask','lcp','cls','fid','inp','netinfo','whitescreen'].includes(t)) cnt.perf++;
+
+        document.getElementById('cnt-all').textContent = String(cnt.all);
+        document.getElementById('cnt-err').textContent = String(cnt.err);
+        document.getElementById('cnt-api').textContent = String(cnt.api);
+        document.getElementById('cnt-perf').textContent = String(cnt.perf);
+
+        const li = document.createElement('li');
+        li.className = 'evt';
+        const time = document.createElement('div'); time.className = 'time'; time.textContent = new Date().toLocaleTimeString();
+        const badgeEl = document.createElement('span'); badgeEl.className = 'badge ' + badge(t); badgeEl.textContent = t || 'event';
+        const pre = document.createElement('pre');
+        const clone = JSON.parse(safeStringify(evt));
+        if (clone.stack && clone.stack.length > 800) clone.stack = clone.stack.slice(0,800) + '…';
+        if (clone.componentStack && clone.componentStack.length > 400) clone.componentStack = clone.componentStack.slice(0,400) + '…';
+        pre.textContent = JSON.stringify(clone, null, 2);
+        li.append(time, badgeEl, pre);
+        document.getElementById('feed').insertBefore(li, document.getElementById('feed').firstChild);
+      };
+      client.onEvent(addEvent);
+      window.__RUM_TAP__ && window.__RUM_TAP__(addEvent);
+      client.track({ type: '__hello', message: 'feed online ✅' });
+
+      // 原生兜底（即使插件没上报也显示）
+      addEventListener('error', (e) => addEvent({ type:'js-error', message:e.message, stack:String(e.error?.stack||''), filename:e.filename, lineno:e.lineno, colno:e.colno }), true);
+      addEventListener('unhandledrejection', (e) => addEvent({ type:'promise-reject', reason:String(e.reason) }), true);
+
+      function badge(type){
+        if (type.includes('error') || type==='js-error' || type==='promise-reject') return 'err';
+        if (type === 'api' || type === 'res') return 'api';
+        if (['pv','route-leave','hashchange','popstate','route'].includes(type)) return 'route';
+        if (['ttfb','nav','first-paint','first-contentful-paint','longtask','lcp','cls','fid','inp','netinfo','whitescreen'].includes(type)) return 'perf';
+        if (type === 'console') return 'console';
+        return 'other';
+      }
+
+      // ========= React 小 App（ErrorBoundary + 全局触发） =========
+      const e = React.createElement;
+      const Boundary = RUMReact.RumErrorBoundary;
+
+      function onBoundaryError(err, info){
+        client.track({
+          type: 'react-error',
+          message: err?.message || String(err),
+          stack: String(err?.stack||'').slice(0, 1000),
+          componentStack: String(info?.componentStack||'').slice(0, 800)
+        });
+      }
+      const Fallback = ({ error, reset }) => e('div', null,
+        e('h3', null, '😵 组件崩了'),
+        e('div', null, String(error?.message||error)),
+        e('button', { className:'btn', onClick: reset }, 'Reset')
+      );
+
+      class Buggy extends React.Component {
+        constructor(p){ super(p); this.state = { crash:false }; }
+        componentDidMount(){ window.__reactCrash = () => this.setState({ crash:true }); }
+        componentWillUnmount(){ delete window.__reactCrash; }
+        render(){
+          if (this.state.crash) throw new Error('React render boom!');
+          return e('div', null,
+            e('button', { className:'btn err', onClick: ()=> this.setState({ crash:true }) }, '触发渲染期错误'),
+            e('button', { className:'btn', onClick: ()=> setTimeout(()=> { throw new Error('async boom (not in boundary)') }, 0) }, '异步抛错（交给 window.onerror）'),
+            e('button', { className:'btn', onClick: ()=> Promise.reject('unhandled promise rejection 😈') }, '未处理 Promise 拒绝')
+          );
+        }
+      }
+
+      const App = () => e(Boundary, { fallbackRender: Fallback, onError: onBoundaryError, resetKeys:[location.href] }, e(Buggy));
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(e(App));
+
+      // 显隐右栏
+      function toggleReact(){
+        const card = document.querySelector('.react-card');
+        const main = document.querySelector('main');
+        const hide = card.style.display !== 'none';
+        card.style.display = hide ? 'none' : '';
+        main.style.gridTemplateColumns = hide ? '1fr' : '1fr 320px';
+      }
+
+      // ========= 触发器 =========
+      function makeJSError(){ window.__NOPE__.x = 1; }
+      function makePromiseReject(){ Promise.reject(new Error('Demo rejection')); }
+      function makeReactRenderError(){
+        if (typeof window.__reactCrash === 'function') { window.__reactCrash(); return; }
+        const btn = document.querySelector('#root .btn.err');
+        if (btn) btn.dispatchEvent(new Event('click', { bubbles:true }));
+        else alert('React 区域已隐藏，请先打开再测～');
+      }
+      function makeResourceError(){ const img=new Image(); img.src='/__not_exists__/broken-'+Date.now()+'.png'; img.width=1; img.height=1; img.alt='broken'; document.body.appendChild(img); }
+      function doFetchOk(){ fetch('../../packages/rum-core/dist/rum.global.js').then(r=>r.text()); }
+      function doFetch404(){ fetch('/not-found-' + Date.now()); }
+      function doXHROk(){ const x=new XMLHttpRequest(); x.open('GET','../../packages/rum-react/dist/react.global.js',true); x.onload=()=>{}; x.send(); }
+      function doXHRFail(){ const x=new XMLHttpRequest(); x.open('GET','/nope-' + Date.now(),true); x.timeout=1500; x.onerror=()=>{}; x.ontimeout=()=>{}; x.send(); }
+      function blockMain(){ const t=performance.now(); while (performance.now()-t<200) {} }
+      function scrollDown(){ window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); }
+      function consoleWarn(){ console.warn('warn from demo', { when: Date.now() }); }
+      function consoleError(){ console.error('error from demo', new Error('console boom')); }
+      function goHash(){ location.hash = 'demo-' + Math.random().toString(36).slice(2,7); }
+      function goPush(){ history.pushState({}, '', '/react-demo-' + Math.random().toString(36).slice(2,6) + '?q=1#h'); }
+
+      addEventListener('beforeunload', ()=> client.flush(true));
+    </script>
+  </body>
+</html>

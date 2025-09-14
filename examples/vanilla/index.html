@@ -1,0 +1,153 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>RUM Vanilla Playground</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+      :root { --bg:#0b0d10; --panel:#11151a; --muted:#9aa4af; --ok:#3fb950; --warn:#d29922; --err:#f85149; --info:#58a6ff; }
+      * { box-sizing: border-box }
+      body { margin:0; background:var(--bg); color:#e6edf3; font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Emoji; }
+      header { padding:14px 18px; background:#0d1117; border-bottom:1px solid #1f2328; display:flex; align-items:center; gap:8px; flex-wrap:wrap }
+      header h1 { margin:0; font-size:16px; font-weight:700; letter-spacing:.3px }
+      header .pill { padding:2px 8px; border-radius:999px; background:#161b22; color:#9aa4af; font-size:12px }
+      main { display:grid; grid-template-columns: 1fr 360px; gap:16px; padding:16px; }
+      .card { background:var(--panel); border:1px solid #1f2328; border-radius:12px; overflow:hidden }
+      .card h3 { margin:0; padding:10px 12px; font-size:13px; color:#c3d1d9; border-bottom:1px solid #1f2328; background:#0f1318; display:flex; align-items:center; justify-content:space-between; gap:8px }
+      .card .body { padding:12px }
+      .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 10px; margin:6px 6px 0 0; border:1px solid #2d333b; border-radius:8px; background:#161b22; color:#c9d1d9; cursor:pointer; }
+      .btn:hover { background:#1c2128 }
+      .btn.small { padding:6px 8px; font-size:12px }
+      .btn.err   { border-color: var(--err); color:#ffdfe1 }
+      .btn.warn  { border-color: var(--warn); color:#fff4cf }
+      .btn.ok    { border-color: var(--ok);  color:#d1ffd7 }
+      .btn.info  { border-color: var(--info); color:#d6eaff }
+      .kvs { display:grid; grid-template-columns:auto 1fr; gap:6px 10px; color:#c3d1d9 }
+      .kvs b { color:#9fb3c8 }
+      #feed { height: calc(100vh - 180px); overflow:auto; padding:0; margin:0; list-style:none; background:#0f1318; border-top:1px solid #1f2328 }
+      .evt { display:flex; padding:10px 12px; gap:10px; border-bottom:1px solid #1f2328; align-items:flex-start }
+      .evt pre { margin:0; white-space:pre-wrap; word-break:break-word; color:#c9d1d9 }
+      .badge { padding:2px 6px; font-size:12px; border-radius:6px; line-height:18px; align-self:center }
+      .badge.err{ background:#3a0d10; color:#ffb1b8; border:1px solid #5e141b }
+      .badge.warn{ background:#3a2b0d; color:#ffe08a; border:1px solid #5d4712 }
+      .badge.api{ background:#0d253a; color:#9ad1ff; border:1px solid #153a5e }
+      .badge.perf{ background:#0d3a2b; color:#a6ffcd; border:1px solid #155e47 }
+      .badge.route{ background:#2b0d3a; color:#e0b3ff; border:1px solid #45155e }
+      .badge.console{ background:#2f2f2f; color:#eee; border:1px solid #444 }
+      .badge.other{ background:#222; color:#ddd; border:1px solid #393939 }
+      .time { color:var(--muted); font-variant-numeric: tabular-nums; min-width:78px }
+      .footer { padding:8px 12px; color:#93a4b5; font-size:12px; display:flex; gap:14px; align-items:center; flex-wrap:wrap }
+      code { background:#11161b; padding:2px 6px; border-radius:6px; border:1px solid #1f2328; color:#d4e2f2 }
+      @media (max-width: 900px) { main { grid-template-columns: 1fr } #feed { height: 380px } }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>RUM Vanilla Playground</h1>
+      <span class="pill" id="version">loading…</span>
+      <span class="pill">🧪 error/net/perf/route/console</span>
+    </header>
+
+    <main>
+      <section class="card">
+        <h3>
+          🔧 操作面板
+          <span>
+            <button class="btn small" onclick="clearFeed()">清空</button>
+          </span>
+        </h3>
+        <div class="body">
+          <div class="kvs" style="margin-bottom:10px">
+            <b>appId</b><span><code>demo</code></span>
+            <b>release</b><span><code>0.1.0</code></span>
+            <b>features</b><span class="muted">error, net, perf, route + console/resource/behavior/lifecycle</span>
+          </div>
+
+          <div>
+            <!-- 错误 -->
+            <button class="btn err"  onclick="makeJSError()">JS Error</button>
+            <button class="btn err"  onclick="makePromiseReject()">Unhandled Promise</button>
+            <button class="btn err"  onclick="makeResourceError()">Resource Error</button>
+
+            <!-- 网络 -->
+            <button class="btn info" onclick="doFetchOk()">fetch 200</button>
+            <button class="btn info" onclick="doFetch404()">fetch 404</button>
+            <button class="btn info" onclick="doXHROk()">XHR 200</button>
+            <button class="btn info" onclick="doXHRFail()">XHR fail</button>
+
+            <!-- 性能 / 行为 / console -->
+            <button class="btn warn" onclick="blockMain()">LongTask</button>
+            <button class="btn"      onclick="scrollDown()">Scroll</button>
+            <button class="btn"      onclick="doConsoleWarn()">console.warn</button>
+            <button class="btn"      onclick="doConsoleError()">console.error</button>
+
+            <!-- 路由 -->
+            <button class="btn ok"   onclick="goHash()">Hash 跳转</button>
+            <button class="btn ok"   onclick="goPush()">History 跳转</button>
+          </div>
+        </div>
+        <div class="footer">
+          <span>🧵 事件流</span>
+          <span>计数：<code id="cnt-all">0</code> 总，<code id="cnt-err">0</code> 错，<code id="cnt-api">0</code> 网，<code id="cnt-perf">0</code> 性能</span>
+        </div>
+        <ul id="feed"></ul>
+      </section>
+
+      <section class="card">
+        <h3>📋 说明</h3>
+        <div class="body">
+          <p>本页订阅 <code>client.onEvent</code>，会把 SDK 的所有上报事件（插件/业务）打印到左侧事件流。</p>
+          <p class="muted">演示用途请在仓库根目录起服务并访问 <code>/examples/vanilla/</code> 路径。</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- RUM 核心（全局：window.RUM） -->
+    <script src="../../packages/rum-core/dist/rum.global.js"></script>
+    <script>
+      // ========= 初始化 RUM =========
+      const client = RUM.initRUM({
+        appId: 'demo',
+        release: '0.1.0',
+        features: { console: true, resource: true, behavior: true, lifecycle: true },
+      });
+      document.getElementById('version').textContent = 'RUM v' + client.version;
+
+      // ========= Feed & 订阅 =========
+      function safeStringify(obj){ const seen=new WeakSet(); return JSON.stringify(obj,(k,v)=>{ if(typeof v==='bigint') return v.toString(); if(v&&typeof v==='object'){ if(seen.has(v)) return '[Circular]'; seen.add(v);} return v;},2); }
+      const cnt={all:0,err:0,api:0,perf:0};
+      function clearFeed(){ document.getElementById('feed').innerHTML=''; cnt.all=cnt.err=cnt.api=cnt.perf=0; ['all','err','api','perf'].forEach(k=>document.getElementById('cnt-'+k).textContent='0'); }
+      function badge(type){ if(type.includes('error')||type==='js-error'||type==='promise-reject') return 'err'; if(type==='api'||type==='res') return 'api'; if(['pv','route-leave'].includes(type)) return 'route'; if(['ttfb','nav','first-paint','first-contentful-paint','longtask','lcp','cls','fid','inp','netinfo','whitescreen'].includes(type)) return 'perf'; if(type==='console') return 'console'; return 'other'; }
+      function addEvent(evt){
+        cnt.all++; const t=String(evt.type||''); if(t.includes('error')||t==='js-error'||t==='promise-reject') cnt.err++; if(t==='api'||t==='res') cnt.api++; if(['ttfb','nav','first-paint','first-contentful-paint','longtask','lcp','cls','fid','inp','netinfo','whitescreen'].includes(t)) cnt.perf++;
+        document.getElementById('cnt-all').textContent=String(cnt.all); document.getElementById('cnt-err').textContent=String(cnt.err); document.getElementById('cnt-api').textContent=String(cnt.api); document.getElementById('cnt-perf').textContent=String(cnt.perf);
+        const li=document.createElement('li'); li.className='evt';
+        const time=document.createElement('div'); time.className='time'; time.textContent=new Date().toLocaleTimeString();
+        const b=document.createElement('span'); b.className='badge '+badge(t); b.textContent=t||'event';
+        const pre=document.createElement('pre'); const clone=JSON.parse(safeStringify(evt)); if(clone.stack&&clone.stack.length>800) clone.stack=clone.stack.slice(0,800)+'…'; pre.textContent=JSON.stringify(clone,null,2);
+        li.append(time,b,pre); document.getElementById('feed').insertBefore(li, document.getElementById('feed').firstChild);
+      }
+      client.onEvent(addEvent); window.__RUM_TAP__ && window.__RUM_TAP__(addEvent);
+      client.track({ type:'__hello', message:'feed online ✅' });
+      addEventListener('error', e=>addEvent({type:'js-error', message:e.message, stack:String(e.error?.stack||'')}), true);
+      addEventListener('unhandledrejection', e=>addEvent({type:'promise-reject', reason:String(e.reason)}), true);
+
+      // ========= 触发器 =========
+      function makeJSError(){ window.__NOPE__.x = 1; }
+      function makePromiseReject(){ Promise.reject(new Error('Demo rejection')); }
+      function makeResourceError(){ const img=new Image(); img.src='/__not_exists__/broken-'+Date.now()+'.png'; img.width=1; img.height=1; img.alt='broken'; document.body.appendChild(img); }
+      function doFetchOk(){ fetch('../../packages/rum-core/dist/rum.global.js').then(r=>r.text()); }
+      function doFetch404(){ fetch('/not-found-' + Date.now()); }
+      function doXHROk(){ const x=new XMLHttpRequest(); x.open('GET','../../packages/rum-core/dist/rum.global.js',true); x.onload=()=>{}; x.send(); }
+      function doXHRFail(){ const x=new XMLHttpRequest(); x.open('GET','/nope-' + Date.now(),true); x.timeout=1500; x.onerror=()=>{}; x.ontimeout=()=>{}; x.send(); }
+      function blockMain(){ const t=performance.now(); while(performance.now()-t<200){} }
+      function scrollDown(){ window.scrollTo({ top: document.body.scrollHeight, behavior:'smooth' }); }
+      function doConsoleWarn(){ console.warn('warn from vanilla', { when: Date.now() }); }
+      function doConsoleError(){ console.error('error from vanilla', new Error('console boom')); }
+      function goHash(){ location.hash = 'vanilla-' + Math.random().toString(36).slice(2,7); }
+      function goPush(){ history.pushState({}, '', '/vanilla-demo-' + Math.random().toString(36).slice(2,6) + '?q=1#h'); }
+
+      addEventListener('beforeunload', ()=> client.flush(true));
+    </script>
+  </body>
+</html>

@@ -1,0 +1,23 @@
+{
+  "name": "@rum/rum-core",
+  "version": "0.1.0",
+  "type": "module",
+  "module": "dist/rum.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/rum.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "unpkg": "dist/rum.global.js",
+  "jsdelivr": "dist/rum.global.js",
+  "files": ["dist"],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc -p ./tsconfig.json --noEmit",
+    "clean": "rimraf dist"
+  }
+}

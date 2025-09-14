@@ -1,0 +1,11 @@
+export { errorPlugin }     from './error';
+export { netPlugin }       from './net';
+export { perfPlugin }      from './perf';
+export { routePlugin }     from './route';
+export { consolePlugin }   from './console';
+export { resourcePlugin }  from './resource';
+export { behaviorPlugin }  from './behavior';
+export { exposurePlugin }  from './exposure';
+export type { ExposureSpec } from './exposure';
+export { lifecyclePlugin } from './lifecycle';
+export { wsPlugin }        from './ws';

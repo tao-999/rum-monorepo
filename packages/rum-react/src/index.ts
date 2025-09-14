@@ -1,0 +1,1 @@
+export { RumErrorBoundary } from './RumErrorBoundary';

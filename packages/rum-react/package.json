@@ -1,0 +1,34 @@
+{
+  "name": "@rum/rum-react",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "dist/react.umd.js",
+  "module": "dist/react.esm.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/react.esm.js",
+      "require": "./dist/react.umd.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "peerDependencies": {
+    "react": ">=16.14.0",
+    "react-dom": ">=16.14.0"
+  },
+  "devDependencies": {
+    "@types/react": "18",
+    "@types/react-dom": "18",
+    "tsup": "^8.3.0",
+    "typescript": "^5.6.3"
+  },
+  "scripts": {
+    "build": "tsup",
+    "clean": "rimraf dist || true",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "sideEffects": false
+}
